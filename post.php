@@ -22,7 +22,7 @@ $d = makeDot($tables, $relations);
 file_put_contents("./out.dot", $d);
 `dot -Tpng -O ./out.dot`;
 `cp ./out.dot.png ./$image.png`;
-header("Location: /dot/?time=$time");
+header("Location: index.php?time=$time");
 die();
 
 function makeDot($tables, $relations)
