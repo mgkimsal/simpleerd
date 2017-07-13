@@ -19,3 +19,4 @@ birthday=date
 
 The "get files" button will generate Laravel 5.4 migration files and models.  
 
+http://kims.al/simpleerd for a demo.
