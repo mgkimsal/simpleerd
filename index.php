@@ -14,7 +14,7 @@ if(strpos($x,".meta")>0) {
 	$img = "sample";
 }
 $image = "";
-if(file_exists("./$img.png")) { 
+if(file_exists("./$img.png")) {
 $image = "./$img.png";
 }
 ?>
@@ -28,7 +28,10 @@ $image = "./$img.png";
 <input type="submit" value="Post"/>
 </form>
 <form method='post' action='files.php'>
-<input type="submit" value="Get files"/>
+    <label><input type="checkbox" name="foreignkeys" value="yes">
+        Include explicit foreign keys in migrations
+    </label>
+<input type="submit" value="Generate models and migrations"/>
 </form>
 <?php if($image!="") { ?>
 <img src="<?=$image;?>?time=<?=$time;?>"/>

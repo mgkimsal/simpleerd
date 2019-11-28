@@ -38,8 +38,9 @@ graph [
  ]
 EOD;
 
-    foreach($tables as $table=>$fields)
+    foreach($tables as $table=>$def)
     {
+        $fields = $def['defs'];
         $dot .= "$table [\n";
         $dot .= <<<EOD
 label = <<table bgcolor="#FAFAFA" border="0" cellborder="1" cellspacing="0" cellpadding="4">
@@ -53,7 +54,7 @@ EOD;
             $p = "f".$port;
                 $b = "FFFFFF";
             $dot .= <<<EOD
-            
+
 <tr><td align="center" bgcolor="#$b" port="$p">
  $name
  </td></tr>
@@ -74,7 +75,7 @@ EOD;
             {
                 $dot .= <<<EOD
  "$table":f$port -> "$rel" []
- 
+
 EOD;
 
             }

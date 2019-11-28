@@ -1,4 +1,5 @@
 <?php
+$includeForeignKeys = @$_POST['foreignkeys'] ?: "no";
 
 include("common.php");
 $x = parse_ini_file("./dot.ini",true);
@@ -6,14 +7,20 @@ $image = $x['.meta']['project'] ?: "sample";
 unset($x['.meta']);
 
 
-if(file_exists("./$img.png")) { 
+if(file_exists("./$img.png")) {
 $image = "./$img.png";
 }
 
 $j = makeTablesAndRelations($x);
+$hasOne = $j['hasOne'];
+$belongsTo = $j['belongsTo'];
+$hasMany = $j['hasMany'];
 $tables = $j['tables'];
 $relations = $j['relations'];
-
+//echo "<pre>"; print_r($hasOne);
+//echo "<pre>"; print_r($belongsTo);die();
+//echo "<pre>"; print_r($relations);die();
+//echo "<pre>"; print_r($tables);die();
 
 
 array_map('unlink', glob("./migrations/*php"));
@@ -29,7 +36,10 @@ array_map('unlink', glob("./models/*php"));
 
 foreach($tables as $tableName=>$tableDef)
 {
-	$info = makeModel($tableName, $tableDef);
+	$info = makeModel($tableName, $tableDef,
+        @$belongsTo[$tableName] ?: [],
+        @$hasOne[$tableName] ?: [],
+        @$hasMany[$tableName] ?: []);
 	$file = $info['file'];
 	$name = $info['name'];
 	$full = $name.".php";
@@ -39,7 +49,7 @@ foreach($tables as $tableName=>$tableDef)
 
 foreach($tables as $tableName=>$tableDef)
 {
-	$info = makeTable($tableName, $tableDef);
+	$info = makeTable($tableName, $tableDef['defs']);
 	$file = $info['file'];
 	$name = $info['name'];
 	$full = date("Y_m_d_hms_").$name.".php";
@@ -48,22 +58,26 @@ foreach($tables as $tableName=>$tableDef)
 }
 sleep(1);
 
-foreach($relations as $tableName=>$relDef)
-{
-	if(count($relDef)==0) { continue; }
-	$info = makeRelation($tableName, $relDef);
-	$file = $info['file'];
-	$name = $info['name'];
-	$full = date("Y_m_d_hms_").$name.".php";
-	file_put_contents("./migrations/$full", $file);
-	chmod("./migrations/$full", 0777);
+if($includeForeignKeys=="yes") {
+    foreach ($relations as $tableName => $relDef) {
+        if (count($relDef) == 0) {
+            continue;
+        }
+        $info = makeRelation($tableName, $relDef);
+        $file = $info['file'];
+        $name = $info['name'];
+        $full = date("Y_m_d_hms_") . $name . ".php";
+        file_put_contents("./migrations/$full", $file);
+        chmod("./migrations/$full", 0777);
+    }
 }
 
 
 
 makeReadme();
-$zipname = 'data.zip';
+$zipname = 'datamodels.zip';
 @unlink($zipname);
+`zip $zipname ./dot.ini`;
 `zip $zipname ./migrations/*`;
 `zip $zipname ./models/*`;
 `zip $zipname ./README.txt`;
@@ -89,24 +103,70 @@ file_put_contents("./README.txt", $x);
 
 }
 
-function makeModel($tableName, $tableDef)
+function makeModel($tableName, $tableDef, $belongsTo, $hasOne, $hasMany)
 {
 
 $tmp = str_replace(" ","", ucwords(str_replace("_", " ", $tableName)));
 $className = $tmp;
 $filename = $className;
 
+$uses = [];
+foreach($hasOne as $c) { $m = ucfirst($c); $uses[$m] = $m; }
+foreach($hasMany as $c) { $m = ucfirst($c); $uses[$m] = $m; }
+$useList= "";
+foreach($uses as $u) { $useList .= 'use App\Models\\' . $u . ";\n"; }
+
 $x = <<<EOD
 <?php
 
-namespace App;
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+$useList
 class $className extends Model
 {
 
 	protected \$table = "$tableName";
+
+EOD;
+    foreach($belongsTo as $k=>$v)
+    {
+        $upperCaseV = ucfirst($v);
+        $x.= <<<EOD
+
+    public function $v()
+    {
+        return \$this->belongsTo($upperCaseV::class);
+    }
+EOD;
+    }
+    foreach($hasOne as $k=>$v)
+    {
+        $upperCaseV = ucfirst($v);
+        $x.= <<<EOD
+
+    public function $v()
+    {
+        return \$this->hasOne($upperCaseV::class);
+    }
+EOD;
+    }
+
+    foreach($hasMany as $k=>$v)
+    {
+        $upperCaseV = ucfirst($v);
+        $plural = $v."s";
+        $x.= <<<EOD
+
+    public function $plural()
+    {
+        return \$this->hasMany($upperCaseV::class);
+    }
+EOD;
+    }
+
+
+$x .= <<<EOD
 
 }
 
@@ -152,23 +212,23 @@ foreach($tableDef as $key)
 	list($name,$type) = explode("(",$key);
 	$type = str_replace(")","",$type);
 	$name = trim($name);
-	if($name=="id" || $name=="date_created" || $name=="date_updated") { continue; } 
-	if($type=="int") { 
+	if($name=="id" || $name=="date_created" || $name=="date_updated") { continue; }
+	if($type=="int") {
 		$x.= "\n\t    \$table->unsignedInteger('$name');";
 	}
-	if($type=="decimal") { 
+	if($type=="decimal") {
 		$x.= "\n\t    \$table->decimal('$name',14,8);";
 	}
-	if($type=="string") { 
+	if($type=="string") {
 		$x.= "\n\t    \$table->string('$name');";
 	}
-	if($type=="bool" || $type=="boolean") { 
+	if($type=="bool" || $type=="boolean") {
 		$x.= "\n\t    \$table->boolean('$name');";
 	}
-	if($type=="text") { 
+	if($type=="text") {
 		$x.= "\n\t    \$table->text('$name');";
 	}
-	if($type=="date") { 
+	if($type=="date") {
 		$x.= "\n\t    \$table->date('$name');";
 	}
 }
