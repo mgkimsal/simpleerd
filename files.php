@@ -28,10 +28,10 @@ array_map('unlink', glob("./migrations/*php"));
 @unlink("./migrations");
 @mkdir("./migrations");
 
-array_map('unlink', glob("./models/*php"));
-@rmdir("./models");
-@unlink("./models");
-@mkdir("./models");
+array_map('unlink', glob("./Models/*php"));
+@rmdir("./Models");
+@unlink("./Models");
+@mkdir("./Models");
 
 
 foreach($tables as $tableName=>$tableDef)
@@ -43,8 +43,8 @@ foreach($tables as $tableName=>$tableDef)
 	$file = $info['file'];
 	$name = $info['name'];
 	$full = $name.".php";
-	file_put_contents("./models/$full", $file);
-	chmod("./models/$full", 0777);
+	file_put_contents("./Models/$full", $file);
+	chmod("./Models/$full", 0777);
 }
 
 foreach($tables as $tableName=>$tableDef)
@@ -79,7 +79,7 @@ $zipname = 'datamodels.zip';
 @unlink($zipname);
 `zip $zipname ./dot.ini`;
 `zip $zipname ./migrations/*`;
-`zip $zipname ./models/*`;
+`zip $zipname ./Models/*`;
 `zip $zipname ./README.txt`;
 `zip $zipname ./$image.png`;
     header('Content-Type: application/zip');
@@ -96,7 +96,7 @@ function makeReadme()
 
 Copy the 'migrations' files in to database/migrations folder
 
-Copy the 'models' files directly in to the app/ folder
+Copy the 'Models' files directly in to the app/ folder
 
 EOD;
 file_put_contents("./README.txt", $x);
